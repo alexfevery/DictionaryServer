@@ -1,4 +1,6 @@
 # HTTPDictionaryServer
+![Screenshot](/testscreen.png?raw=true "Optional Title")
+![Screenshot](/testscreen2.png?raw=true "Optional Title")
 Multithreading HTTP Server for Chinese dictionary website. Can be hooked up to a database or TSV file system. 
 Supports 9 columns for word entries and 3 for sentence entries. 
 
