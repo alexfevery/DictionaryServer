@@ -19,9 +19,10 @@ namespace DictionaryServer
         public static HttpListener listener = new HttpListener();
         static Thread SpawnNewClient;
         public static List<string> UserList = new List<string>();
-        public static List<string> IPList = new List<string>();
+        public static List<string> RecentIPList = new List<string>();
+        public static List<string> TotalIPList = new List<string>();
         public static List<string> BanList = new List<string>();
-        public static List<string> CurrentIPList = new List<string>();
+        public static List<string> ActiveIPList = new List<string>();
         public static List<Thread> threadlist = new List<Thread>();
 
         public static Dictionary<string[], DictionaryEntry> DictionaryDataPinyin;
@@ -202,15 +203,15 @@ namespace DictionaryServer
             }
             string data = "";
             string IP = query.RemoteEndPoint.Address.ToString();
-            while (CurrentIPList.Count(x => x == IP) > 2) { Thread.Sleep(100); }
-            CurrentIPList.Add(IP);
+            while (ActiveIPList.Count(x => x == IP) > 2) { Thread.Sleep(100); }
+            ActiveIPList.Add(IP);
             try
             {
                 using (StreamReader reader = new StreamReader(query.InputStream, query.ContentEncoding)) { data = reader.ReadToEnd(); }
             }
             catch
             {
-                if (CurrentIPList.Contains(IP)) { CurrentIPList.Remove(IP); }
+                if (ActiveIPList.Contains(IP)) { ActiveIPList.Remove(IP); }
                 return;
             }
             if (!string.IsNullOrWhiteSpace(data))
@@ -226,13 +227,14 @@ namespace DictionaryServer
                     else
                     {
                         Request.HandleRequest(context, request);
-                        if (!IPList.Contains(IP)) { uniqueconnections++; }
-                        IPList.Add(IP);
+                        if (!TotalIPList.Contains(IP)) { uniqueconnections++; }
+                        TotalIPList.Add(IP);
+                        RecentIPList.Add(IP);
                     }
                 }
                 else { Request.Send(context, "error", request); }
             }
-            if (CurrentIPList.Contains(IP)) { CurrentIPList.RemoveAll(x => x == IP); }
+            if (ActiveIPList.Contains(IP)) { ActiveIPList.RemoveAll(x => x == IP); }
             timer.Stop();
         }
 

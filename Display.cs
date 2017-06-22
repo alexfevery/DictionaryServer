@@ -50,18 +50,15 @@ namespace DictionaryServer
                         File.AppendAllText(Program.userlog, DateTime.Now.ToLongDateString() + Environment.NewLine + Environment.NewLine);
                         Program.UserList.Clear();
                         Program.threadlist.Clear();
-                        Program.totalconnections = 0;
-                        Program.uniqueconnections = 0;
                     }
                     if (int.Parse(UpdateTimer.Tag.ToString()) >= 100)
                     {
                         UpdateTimer.Tag = 0;
-                        foreach (string item in Program.IPList)
+                        foreach (string item in Program.RecentIPList)
                         {
-                            if (!Program.BanList.Contains(item) && Program.IPList.Count(x => x == item) >= 100)
+                            if (!Program.BanList.Contains(item) && Program.RecentIPList.Count(x => x == item) >= 100)
                             {
                                 Program.BanList.Add(item);
-
                                 //Credentials stored separately on a local machine for obvious reasons.
                                 string email = File.ReadAllText(@"C:\Users\alexf\Google Drive\Computer\Documents\emailcredentials.txt").Split('\t')[0];
                                 string password = File.ReadAllText(@"C:\Users\alexf\Google Drive\Computer\Documents\emailcredentials.txt").Split('\t')[1];
@@ -73,7 +70,7 @@ namespace DictionaryServer
                                 client.SendAsync(message, null);
                             }
                         }
-                        Program.IPList.Clear();
+                        Program.RecentIPList.Clear();
                     }
 
 
@@ -88,7 +85,6 @@ namespace DictionaryServer
                     Display1.AppendText("Waiting for connections...");
                     foreach (string line in Program.UserList.ToList())
                     {
-                        if (Program.totalconnections == 0) { Display1.Clear(); }
                         if (Display2.Lines.Contains(line)) { continue; }
                         Display2.SelectionStart = 0;
                         Display2.SelectionLength = 0;
