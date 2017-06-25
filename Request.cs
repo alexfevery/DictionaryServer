@@ -7,12 +7,15 @@ using System.Web;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.Diagnostics;
+using System.Threading;
 
 namespace DictionaryServer
 {
     public class Request
     {
+        public Stopwatch timer;
         public string IP { get; set; }
+        public string User { get; set; }
         public string RequestType { get; set; }
         public string SearchText { get; set; }
         public int WordPage { get; set; }
@@ -24,6 +27,8 @@ namespace DictionaryServer
         public static Request ProcessRequest(string data, string ip)
         {
             Request TCPIn = new Request();
+            TCPIn.timer = new Stopwatch();
+            TCPIn.timer.Start();
             TCPIn.IP = ip;
             try
             {
@@ -44,7 +49,13 @@ namespace DictionaryServer
                 if (postParams.ContainsKey("sentencepage") && !string.IsNullOrWhiteSpace(postParams["sentencepage"])) { TCPIn.SentencePage = Convert.ToInt32(postParams["sentencepage"]); }
                 TCPIn.FullRequest = string.Join("↔", postParams.Values);
                 DateTime now = DateTime.Now;
-                try { Program.UserList.Add(TCPIn.IP + ReturnLocation(TCPIn.IP) + '\t' + TCPIn.RequestType + '\t' + TCPIn.SearchText + '\t' + now.Hour.ToString("00") + ":" + now.Minute.ToString("00") + ":" + now.Second.ToString("00")); } catch { }
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try {
+                        TCPIn.User = TCPIn.IP + ReturnLocation(TCPIn.IP) + '\t' + TCPIn.RequestType + '\t' + TCPIn.SearchText + '\t' + now.Hour.ToString("00") + ":" + now.Minute.ToString("00") + ":" + now.Second.ToString("00");
+                        Program.UserList.Add(TCPIn.User);
+                    } catch { TCPIn.User = "error"; }
+                });
                 return TCPIn;
             }
             catch { return null; }
@@ -69,8 +80,12 @@ namespace DictionaryServer
                 Stream output = context.Response.OutputStream;
                 output.Write(buffer, 0, buffer.Length);
                 output.Close();
-                if (request == null) { return; }
-                File.AppendAllText(Program.userlog, DateTime.Now.ToLongTimeString() + "     " + request.IP + ReturnLocation(request.IP) + "   " + ("(Unregistered)" + "   " + Regex.Replace(request.FullRequest, "↔+", "↔") + Environment.NewLine));
+                request.timer.Stop();
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    while(request.User == null && request.timer.ElapsedMilliseconds < 5000) { Thread.Sleep(10); }
+                    File.AppendAllText(Program.userlog, request.User + "\t" + request.timer.ElapsedMilliseconds + "ms\t" + Regex.Replace(request.FullRequest, "↔+", "↔") + Environment.NewLine); 
+                });
             }
             catch { }
         }

@@ -18,12 +18,12 @@ namespace DictionaryServer
         public static string serverpath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "dictionary-server - Copy");
         public static HttpListener listener = new HttpListener();
         static Thread SpawnNewClient;
+
         public static List<string> UserList = new List<string>();
         public static List<string> RecentIPList = new List<string>();
         public static List<string> TotalIPList = new List<string>();
         public static List<string> BanList = new List<string>();
-        public static List<string> ActiveIPList = new List<string>();
-        public static List<Thread> threadlist = new List<Thread>();
+        public static bool IPlistfree = true;
 
         public static Dictionary<string[], DictionaryEntry> DictionaryDataPinyin;
         public static Dictionary<string[], DictionaryEntry> DictionaryExactWord;
@@ -54,7 +54,6 @@ namespace DictionaryServer
         public static int totalconnections = 0;
         public static int uniqueconnections = 0;
         public static string version = "0.01";
-        public static Stopwatch timer = new Stopwatch();
         public static bool Loading = true;
         public static bool FullReset = false;
         public static Random random = new Random();
@@ -186,7 +185,6 @@ namespace DictionaryServer
                     response.ContentEncoding = Encoding.UTF8;
                     totalconnections++;
                     SpawnNewClient = new Thread(() => NewClient(s));
-                    threadlist.Add(SpawnNewClient);
                     SpawnNewClient.Start();
                 }
             }
@@ -194,7 +192,6 @@ namespace DictionaryServer
 
         static void NewClient(HttpListenerContext context)
         {
-            timer.Restart();
             HttpListenerRequest query = context.Request;
             if (query.HttpMethod == "OPTIONS")
             {
@@ -203,15 +200,12 @@ namespace DictionaryServer
             }
             string data = "";
             string IP = query.RemoteEndPoint.Address.ToString();
-            while (ActiveIPList.Count(x => x == IP) > 2) { Thread.Sleep(100); }
-            ActiveIPList.Add(IP);
             try
             {
                 using (StreamReader reader = new StreamReader(query.InputStream, query.ContentEncoding)) { data = reader.ReadToEnd(); }
             }
             catch
             {
-                if (ActiveIPList.Contains(IP)) { ActiveIPList.Remove(IP); }
                 return;
             }
             if (!string.IsNullOrWhiteSpace(data))
@@ -227,19 +221,16 @@ namespace DictionaryServer
                     else
                     {
                         Request.HandleRequest(context, request);
+                        while (!IPlistfree) { Thread.Sleep(1); }
+                        IPlistfree = false;
                         if (!TotalIPList.Contains(IP)) { uniqueconnections++; }
                         TotalIPList.Add(IP);
                         RecentIPList.Add(IP);
+                        IPlistfree = true;
                     }
                 }
                 else { Request.Send(context, "error", request); }
             }
-            if (ActiveIPList.Contains(IP)) { ActiveIPList.RemoveAll(x => x == IP); }
-            timer.Stop();
         }
-
-
     }
-
-
 }
